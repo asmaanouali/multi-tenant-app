@@ -24,7 +24,13 @@ const PORT = process.env.PORT || 5000;
 // MIDDLEWARE
 // ============================================
 
-app.use(cors());
+app.use(cors({
+  origin: [
+    'http://localhost:5173',
+    'https://gleaming-pika-356641.netlify.app'  // Add your Netlify URL here
+  ],
+  credentials: true
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
