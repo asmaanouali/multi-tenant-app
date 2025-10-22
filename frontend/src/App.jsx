@@ -4,7 +4,8 @@ import { AuthProvider } from './contexts/AuthContext.jsx';
 import ProtectedRoute from './components/common/ProtectedRoute';
 import Layout from './components/layout/Layout';
 
-// Pages
+// Pages 
+//done
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import DashboardPage from './pages/DashboardPage.jsx';
