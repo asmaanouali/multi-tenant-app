@@ -1,0 +1,200 @@
+// backend/prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User roles enum
+enum UserRole {
+  SUPER_ADMIN    // Can manage global catalogs
+  ADMIN          // Organization admin
+  USER           // Regular organization user
+}
+
+// Catalog types enum - ONLY 3 TYPES as per requirements
+enum CatalogType {
+  WORLD_SPECIAL_DAYS
+  NATIONAL_HOLIDAYS
+  REGIONAL_HOLIDAYS
+}
+
+// Event source enum
+enum EventSource {
+  CATALOG           // From global catalog
+  ORGANIZATION      // Organization-specific event
+}
+
+// ============================================
+// TENANTS & USERS
+// ============================================
+
+model Tenant {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  industry    String?
+  country     String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  users              User[]
+  subscriptions      CatalogSubscription[]  // ADD THIS LINE
+  eventSubscriptions EventSubscription[]
+  organizationEvents OrganizationEvent[]
+
+  @@map("tenants")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  firstName String
+  lastName  String
+  role      UserRole @default(USER)
+  tenantId  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdEvents      OrganizationEvent[]
+
+  @@index([tenantId])
+  @@index([email])
+  @@map("users")
+}
+
+// ============================================
+// GLOBAL CATALOGS (ONLY 3 - Managed by Super Admin)
+// ============================================
+
+// The 3 global catalogs - these are just containers
+model Catalog {
+  id          String      @id @default(cuid())
+  name        String      // "World Special Days", "National Holidays", "Regional Holidays"
+  description String?
+  type        CatalogType  // ONLY ONE catalog per type
+  isActive    Boolean     @default(true)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+   // Relations
+  events        CatalogEvent[]
+  subscriptions CatalogSubscription[]  // ADD THIS LINE
+
+  @@map("catalogs")
+}
+// Organization subscribes to entire catalogs
+model CatalogSubscription {
+  id           String   @id @default(cuid())
+  tenantId     String
+  catalogId    String
+  isActive     Boolean  @default(true)
+  subscribedAt DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Relations
+  tenant  Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  catalog Catalog @relation(fields: [catalogId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, catalogId])
+  @@index([tenantId])
+  @@index([catalogId])
+  @@map("catalog_subscriptions")
+}
+
+// Events within global catalogs
+// Country/Region are attributes of EVENTS, not catalogs
+model CatalogEvent {
+  id          String   @id @default(cuid())
+  catalogId   String
+  title       String
+  description String?
+  startDate   DateTime
+  endDate     DateTime
+  
+  // Country/Region as EVENT attributes (not catalog attributes)
+  country     String?  // For National Holidays: "USA", "Algeria", "UK"
+  region      String?  // For Regional Holidays: "California", "MENA", "East Asia"
+  industries  String[] // Optional: ["Technology", "Healthcare", "All"]
+  
+  isRecurring Boolean  @default(false)
+  recurrenceRule String? // RRULE format for recurring events
+  tags        String[] // Array of tags for filtering
+  metadata    Json?    // Additional flexible data
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  catalog       Catalog             @relation(fields: [catalogId], references: [id], onDelete: Cascade)
+  subscriptions EventSubscription[]
+
+  @@index([catalogId])
+  @@index([startDate])
+  @@index([endDate])
+  @@index([country])
+  @@index([region])
+  @@map("catalog_events")
+}
+
+// ============================================
+// EVENT SUBSCRIPTIONS (Orgs subscribe to SPECIFIC events)
+// ============================================
+
+// This allows orgs to pick and choose which events they want
+// AND hide events they don't want
+model EventSubscription {
+  id              String   @id @default(cuid())
+  tenantId        String
+  catalogEventId  String
+  isVisible       Boolean  @default(true) // Org can hide events
+  subscribedAt    DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  tenant       Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  catalogEvent CatalogEvent @relation(fields: [catalogEventId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, catalogEventId])
+  @@index([tenantId])
+  @@index([catalogEventId])
+  @@map("event_subscriptions")
+}
+
+// ============================================
+// ORGANIZATION EVENTS (Custom events per organization)
+// ============================================
+
+model OrganizationEvent {
+  id          String      @id @default(cuid())
+  tenantId    String
+  createdById    String 
+  title       String
+  description String?
+  startDate   DateTime
+  endDate     DateTime
+  isRecurring Boolean     @default(false)
+  recurrenceRule String?
+  source      EventSource @default(ORGANIZATION)
+  tags        String[]
+  metadata    Json?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  // Relations
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdBy User   @relation(fields: [createdById], references: [id])
+
+  @@index([tenantId])
+  @@index([createdById])
+  @@index([startDate])
+  @@index([endDate])
+  @@map("organization_events")
+}
