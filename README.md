@@ -5,7 +5,7 @@ A full-stack multi-tenant application with event management, catalog, and organi
 ## 🏗️ Project Structure
 
 ```
-PROJECT/
+MULTI-TENANT-APP/
 ├── backend/
 │   ├── src/
 │   │   ├── config/
