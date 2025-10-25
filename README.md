@@ -1,6 +1,6 @@
-# Multi-Tenant SaaS Platform
+# Multi-Tenant Platform
 
-A full-stack multi-tenant SaaS application with event management, catalog, and organization features. Built with Node.js, Express, Prisma, and React.
+A full-stack multi-tenant application with event management, catalog, and organization features. Built with Node.js, Express, Prisma, and React.
 
 ## 🏗️ Project Structure
 
@@ -263,4 +263,3 @@ npm run build
 - `npm run preview` - Preview production build
 - `npm test` - Run tests
 - `npm run lint` - Run ESLint
-
